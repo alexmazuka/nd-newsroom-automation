@@ -176,16 +176,43 @@
         <tr><td>Відео</td><td><b>Final Cut Pro</b> + <b>Whisper</b> (локально)</td><td>монтаж за шаблонами; субтитри без хмари</td><td class="cost">наявна ліцензія / 0</td></tr>
       </table>
       </div>
-      <h2 style="margin-top:26px">Моделі Claude і бюджет</h2>
-      <div class="tablewrap" style="margin-top:10px">
+      <h2 style="margin-top:26px">💰 Точна вартість кожного сервісу</h2>
+      <p class="note" style="margin-top:4px">Розрахунок: ~900 матеріалів/міс (30/день), ~10 тис. токенів входу + 4 тис. виходу на матеріал. USD.</p>
+      <div class="tablewrap" style="margin-top:12px">
       <table>
-        <tr><th>Модель</th><th>ID для API</th><th>Вхід / вихід, $ за 1M токенів</th><th>Оцінка на ~900 матеріалів/міс</th></tr>
-        <tr><td>Claude Opus 4.8 <i>(за замовчуванням)</i></td><td><code>claude-opus-4-8</code></td><td>$5 / $25</td><td>≈ $135/міс</td></tr>
-        <tr><td>Claude Sonnet 5</td><td><code>claude-sonnet-5</code></td><td>$3 / $15 (інтро $2 / $10 до 31.08.2026)</td><td>≈ $81 (інтро ≈ $54)</td></tr>
-        <tr><td>Claude Haiku 4.5</td><td><code>claude-haiku-4-5</code></td><td>$1 / $5</td><td>≈ $27/міс</td></tr>
+        <tr><th>Сервіс</th><th style="text-align:right">За день</th><th style="text-align:right">За місяць</th><th style="text-align:right">За рік</th></tr>
+        <tr><td>WordPress (хостинг + домен)</td><td style="text-align:right">—</td><td style="text-align:right">—</td><td style="text-align:right">існуючий</td></tr>
+        <tr><td>WPVibe (Free)</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td></tr>
+        <tr><td>Yoast SEO (free)</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td></tr>
+        <tr><td><b>n8n — VPS self-hosted</b></td><td style="text-align:right"><b>$0.20</b></td><td style="text-align:right"><b>$6</b></td><td style="text-align:right"><b>$72</b></td></tr>
+        <tr><td><b>Claude API — Opus 4.8</b> <i>(дефолт)</i></td><td style="text-align:right"><b>$4.50</b></td><td style="text-align:right"><b>$135</b></td><td style="text-align:right"><b>$1 620</b></td></tr>
+        <tr><td>Telegram Bot API</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td></tr>
+        <tr><td>Google Sheets + Looker Studio</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td></tr>
+        <tr><td>Notion</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td></tr>
+        <tr><td>Canva / Final Cut / Whisper / GA4</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td><td style="text-align:right">$0</td></tr>
       </table>
       </div>
-      <p class="note" style="margin-top:10px">Перемкнути модель = змінити одне поле <code>model</code> у воркфлоу. Повна вартість володіння системою — від ~$32/міс (VPS + Haiku).</p>
+      <p class="note" style="margin-top:8px"><b>Реальні нові витрати — лише два рядки:</b> VPS для n8n і токени Claude API. Решта — безкоштовна або вже оплачена редакцією.</p>
+
+      <h2 style="margin-top:26px">Claude API за моделлю та підсумок</h2>
+      <div class="tablewrap" style="margin-top:10px">
+      <table>
+        <tr><th>Модель</th><th style="text-align:right">За день</th><th style="text-align:right">За місяць</th><th style="text-align:right">За рік</th></tr>
+        <tr><td>Opus 4.8 <i>(дефолт, макс. якість)</i></td><td style="text-align:right">$4.50</td><td style="text-align:right">$135</td><td style="text-align:right">$1 620</td></tr>
+        <tr><td>Sonnet 5 (інтро до 31.08.2026)</td><td style="text-align:right">$1.80</td><td style="text-align:right">$54</td><td style="text-align:right">—</td></tr>
+        <tr><td>Sonnet 5 (повна ціна)</td><td style="text-align:right">$2.70</td><td style="text-align:right">$81</td><td style="text-align:right">$972</td></tr>
+        <tr><td>Haiku 4.5 (економ)</td><td style="text-align:right">$0.90</td><td style="text-align:right">$27</td><td style="text-align:right">$324</td></tr>
+      </table>
+      </div>
+      <div class="tablewrap" style="margin-top:14px">
+      <table>
+        <tr><th>Разом (VPS + Claude)</th><th style="text-align:right">За день</th><th style="text-align:right">За місяць</th><th style="text-align:right">За рік</th><th style="text-align:right">6 міс (проєкт)</th></tr>
+        <tr><td>🟢 Економ (Haiku)</td><td style="text-align:right">~$1.10</td><td style="text-align:right"><b>$33</b></td><td style="text-align:right">$396</td><td style="text-align:right"><b>$198</b></td></tr>
+        <tr><td>🟡 Баланс (Sonnet)</td><td style="text-align:right">~$2.90</td><td style="text-align:right"><b>$87</b></td><td style="text-align:right">$1 044</td><td style="text-align:right"><b>$522</b></td></tr>
+        <tr><td>🔴 Максимум (Opus 4.8)</td><td style="text-align:right">~$4.70</td><td style="text-align:right"><b>$141</b></td><td style="text-align:right">$1 692</td><td style="text-align:right"><b>$846</b></td></tr>
+      </table>
+      </div>
+      <p class="note" style="margin-top:10px">Перемкнути модель = змінити одне поле <code>model</code> у воркфлоу. Гібрид (Haiku на потоці + Opus на критичні матеріали) дає якість за ціною ближче до економ-сценарію.</p>
     </div>
   </section>
 
