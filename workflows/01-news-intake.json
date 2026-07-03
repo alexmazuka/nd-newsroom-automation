@@ -1,0 +1,111 @@
+{
+  "name": "НД · М1+М2 · Збір новин: RSS → антидубль → картка в Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ℹ️ Як запустити цей воркфлоу\n\n1. **Telegram-бот:** створіть через @BotFather, токен збережіть у n8n → Credentials → Telegram API.\n2. **Chat ID:** додайте бота в чат кураторів, дізнайтеся id через @userinfobot і вставте у вузол Telegram замість `ВСТАВТЕ_CHAT_ID`.\n3. **RSS:** у вузлі RSS вкажіть стрічки ваших джерел (можна дублювати вузол на кілька джерел).\n4. Натисніть **Execute workflow** для тесту, потім увімкніть (Active).\n\nАнтидубль тримає журнал посилань за 72 години у пам'яті воркфлоу — повторні лінки не потраплять у чат.",
+        "height": 420,
+        "width": 380
+      },
+      "id": "note-01",
+      "name": "ℹ️ Інструкція",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-620, -120]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "trigger-01",
+      "name": "Кожні 15 хвилин",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-200, 60]
+    },
+    {
+      "parameters": {
+        "url": "https://novosti.dn.ua/feed/"
+      },
+      "id": "rss-01",
+      "name": "RSS: джерело новин",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [20, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.seen = staticData.seen || {};\nconst now = Date.now();\n// чистимо журнал: записи, старші за 72 години\nfor (const [link, ts] of Object.entries(staticData.seen)) {\n  if (now - ts > 72 * 3600 * 1000) delete staticData.seen[link];\n}\nconst fresh = [];\nfor (const item of $input.all()) {\n  const link = item.json.link || item.json.guid || '';\n  if (!link || staticData.seen[link]) continue; // дубль — пропускаємо\n  staticData.seen[link] = now;\n  const title = (item.json.title || '').trim();\n  fresh.push({\n    json: {\n      title,\n      link,\n      card: '📰 ' + title + '\\n' + link + '\\n\\n✅ Беремо в роботу → перешліть у чат «В роботі»\\n❌ Не беремо → просто ігноруйте'\n    }\n  });\n}\nreturn fresh;"
+      },
+      "id": "code-01",
+      "name": "Антидубль (72 год) + картка",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 60]
+    },
+    {
+      "parameters": {
+        "chatId": "ВСТАВТЕ_CHAT_ID",
+        "text": "={{ $json.card }}",
+        "additionalFields": {}
+      },
+      "id": "tg-01",
+      "name": "Telegram: картка кураторам",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [460, 60],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "НД Telegram Bot (створіть credential)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Кожні 15 хвилин": {
+      "main": [
+        [
+          {
+            "node": "RSS: джерело новин",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS: джерело новин": {
+      "main": [
+        [
+          {
+            "node": "Антидубль (72 год) + картка",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Антидубль (72 год) + картка": {
+      "main": [
+        [
+          {
+            "node": "Telegram: картка кураторам",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

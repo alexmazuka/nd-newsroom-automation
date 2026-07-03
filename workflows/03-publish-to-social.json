@@ -1,0 +1,128 @@
+{
+  "name": "НД · М4 · Публікація на сайті → соцверсії → куратору SMM",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ℹ️ Як запустити\n\n1. На WordPress поставте плагін **WP Webhooks** (безкоштовний): Send Data → тригер «Post published» → вставте Production URL цього вузла Webhook.\n2. **Anthropic API key** — у вузол Claude (після тесту перенесіть у Credential).\n3. **Telegram:** chat_id чату SMM-команди у вузол Telegram.\n4. Тест без WordPress:\n```\ncurl -X POST <Test URL> \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"post_title\":\"Заголовок новини\",\"excerpt\":\"Короткий лід\",\"post_permalink\":\"https://novosti.dn.ua/...\"}'\n```\nКуратор SMM отримає три готові версії поста (FB/TG/X), перевірить за чеклістом і опублікує.\n\n🔜 Наступний крок автоматизації: замість ручного постингу — вузли Facebook Graph API і Telegram-каналу після кнопки затвердження.",
+        "height": 520,
+        "width": 420
+      },
+      "id": "note-03",
+      "name": "ℹ️ Інструкція",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-660, -160]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nd-social",
+        "options": {}
+      },
+      "id": "webhook-03",
+      "name": "Webhook: опубліковано на сайті",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-180, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "ВСТАВТЕ_ANTHROPIC_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 1500, system: 'Ти — SMM-редактор видання Новини Донбасу. За опублікованою новиною створи три версії поста українською, використовуй лише надані факти. 1) FACEBOOK: 2-4 речення (головний факт + деталь), наприкінці коротке запитання до читачів, посилання останнім рядком. 2) TELEGRAM: стисло, факт першим рядком, 2-3 речення, без хештегів, посилання останнім рядком. 3) X: до 270 знаків разом з посиланням, без клікбейту. Формат відповіді — рівно три блоки з заголовками FACEBOOK / TELEGRAM / X.', messages: [ { role: 'user', content: 'Заголовок: ' + ($json.body.post_title || $json.body.title || '') + '\\nЛід: ' + ($json.body.excerpt || '') + '\\nПосилання: ' + ($json.body.post_permalink || $json.body.link || '') } ] }) }}",
+        "options": {}
+      },
+      "id": "claude-03",
+      "name": "Claude: соцадаптація",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [60, 80]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst text = (resp.content || []).filter(b => b.type === 'text').map(b => b.text).join('\\n');\nreturn [{ json: { text: '🔁 Соцверсії готові — перевірте за чеклістом і опублікуйте:\\n\\n' + text } }];"
+      },
+      "id": "code-03",
+      "name": "Підготувати повідомлення",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 80]
+    },
+    {
+      "parameters": {
+        "chatId": "ВСТАВТЕ_CHAT_ID_SMM",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "tg-03",
+      "name": "Telegram: куратору SMM",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [540, 80],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "НД Telegram Bot (створіть credential)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: опубліковано на сайті": {
+      "main": [
+        [
+          {
+            "node": "Claude: соцадаптація",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: соцадаптація": {
+      "main": [
+        [
+          {
+            "node": "Підготувати повідомлення",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Підготувати повідомлення": {
+      "main": [
+        [
+          {
+            "node": "Telegram: куратору SMM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

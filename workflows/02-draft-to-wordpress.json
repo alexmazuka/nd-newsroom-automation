@@ -1,0 +1,133 @@
+{
+  "name": "НД · М3 · Факти → Claude-драфт → чернетка у WordPress",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ℹ️ Як запустити\n\n1. **Anthropic API key:** console.anthropic.com → API Keys. Вставте у вузол Claude замість `ВСТАВТЕ_ANTHROPIC_API_KEY` (після тесту перенесіть у Credential типу Header Auth!).\n2. **WordPress:** Користувачі → Профіль → Application Passwords → створіть пароль. У n8n створіть Basic Auth credential: логін WP + цей пароль.\n3. **URL сайту:** перевірте адресу у вузлі WordPress.\n4. Тест (вкладка Test URL вузла Webhook):\n```\ncurl -X POST <Test URL> \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"title\":\"Обстріл Костянтинівки\",\"facts\":\"- 3 липня близько 14:00 обстріляно центр міста (ОВА)\\n- пошкоджено 5-поверхівку, дані про постраждалих уточнюються\",\"source\":\"Донецька ОВА\"}'\n```\nРезультат: у WordPress з'явиться **чернетка** з драфтом, заголовками і SEO-фразою. Публікує тільки куратор.\n\n💡 Модель за замовчуванням — claude-opus-4-8 (найякісніша). Для економії змініть поле model на claude-haiku-4-5.",
+        "height": 560,
+        "width": 420
+      },
+      "id": "note-02",
+      "name": "ℹ️ Інструкція",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-660, -180]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nd-draft",
+        "options": {}
+      },
+      "id": "webhook-02",
+      "name": "Webhook: нова новина",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-180, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "ВСТАВТЕ_ANTHROPIC_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 4000, system: 'Ти — випусковий редактор видання Новини Донбасу. Пиши українською. За наданими фактами створи чернетку новини. Правила: використовуй лише надані факти, нічого не вигадуй; якщо важливого факту бракує — став у текст позначку [ПЕРЕВІРИТИ: чого бракує]; структура: лід з головним фактом (1-2 речення), далі деталі (2-4 абзаци), наприкінці бекграунд; нейтральний інформаційний тон без оцінок. Наприкінці відповіді окремими рядками: ЗАГОЛОВКИ: три варіанти до 90 знаків; SEO-ФРАЗА: ключова фраза 2-4 слова для Yoast; МЕТА-ОПИС: до 155 знаків.', messages: [ { role: 'user', content: 'Робочий заголовок: ' + ($json.body.title || '') + '\\n\\nФакти:\\n' + ($json.body.facts || '') + '\\n\\nДжерело: ' + ($json.body.source || 'не вказано') } ] }) }}",
+        "options": {}
+      },
+      "id": "claude-02",
+      "name": "Claude: AI-драфт",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [60, 80]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst text = (resp.content || []).filter(b => b.type === 'text').map(b => b.text).join('\\n');\nconst src = $('Webhook: нова новина').first().json.body || {};\nreturn [{ json: { title: src.title || 'Без заголовка (робоча чернетка)', content: text } }];"
+      },
+      "id": "code-02",
+      "name": "Зібрати чернетку",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://novosti.dn.ua/wp-json/wp/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.title, content: $json.content, status: 'draft' }) }}",
+        "options": {}
+      },
+      "id": "wp-02",
+      "name": "WordPress: створити чернетку",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 80],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "WP Application Password (створіть credential)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: нова новина": {
+      "main": [
+        [
+          {
+            "node": "Claude: AI-драфт",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: AI-драфт": {
+      "main": [
+        [
+          {
+            "node": "Зібрати чернетку",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Зібрати чернетку": {
+      "main": [
+        [
+          {
+            "node": "WordPress: створити чернетку",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

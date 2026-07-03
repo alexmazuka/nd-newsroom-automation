@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>НД · Автоматизація редакції — симулятор</title>
+<style>
+  :root{
+    --bg:#f3f5f8; --card:#ffffff; --ink:#16212e; --muted:#5c6b7d;
+    --accent:#b3261e; --accent-soft:#fbeae9; --blue:#1d4e79; --blue-soft:#e8f0f7;
+    --ok:#1e7d43; --ok-soft:#e7f4ec; --border:#e3e8ef; --dark:#101820;
+    --r:14px; --shadow:0 1px 2px rgba(22,33,46,.06),0 8px 24px rgba(22,33,46,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;padding-bottom:60px}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  header{background:linear-gradient(135deg,#182c40 0%,#0f1c2b 100%);color:#fff;padding:38px 0 30px;margin-bottom:22px}
+  header h1{font-size:clamp(22px,3.5vw,32px);line-height:1.25;letter-spacing:-.01em}
+  header h1 .red{color:#ff6b61}
+  header p.sub{color:#b9c6d4;margin-top:8px;max-width:760px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .chip{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 14px;font-size:13.5px;color:#e8eef4}
+  .chip b{color:#7fd6a2}
+  nav.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+  nav.tabs button{border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 18px;font-size:15px;cursor:pointer;font-weight:600}
+  nav.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  section.tab{display:none}
+  section.tab.on{display:block}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:20px}
+  h2{font-size:20px;margin-bottom:6px}
+  p.note{color:var(--muted);font-size:14.5px}
+  /* -------- симулятор -------- */
+  .controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0}
+  .btn{border:0;border-radius:10px;padding:11px 20px;font-size:15px;font-weight:700;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:disabled{background:#c9a5a2;cursor:default}
+  .btn.ghost{background:var(--card);border:1px solid var(--border);color:var(--ink)}
+  .timers{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+  .timer{border-radius:10px;padding:8px 14px;font-size:14px;border:1px solid var(--border);background:var(--card)}
+  .timer b{font-size:17px}
+  .timer.old b{color:var(--muted)}
+  .timer.new b{color:var(--ok)}
+  .pipeline{display:grid;grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:12px;margin-top:6px}
+  .stage{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:14px 14px 12px;cursor:pointer;position:relative;transition:border-color .2s, box-shadow .2s}
+  .stage:hover{border-color:#b8c4d2}
+  .stage .top{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+  .tag{font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px;letter-spacing:.02em}
+  .tag.mod{background:var(--blue-soft);color:var(--blue)}
+  .tag.auto{background:#eef1f5;color:var(--muted)}
+  .tag.human{background:var(--accent-soft);color:var(--accent)}
+  .stage h3{font-size:15px;line-height:1.3;margin-bottom:5px}
+  .stage .tools{font-size:12.5px;color:var(--muted)}
+  .stage .num{position:absolute;top:10px;right:12px;font-size:12px;color:#aab6c3;font-weight:700}
+  .stage.active{border-color:var(--accent);box-shadow:0 0 0 4px rgba(179,38,30,.12);animation:pulse 1s ease-in-out infinite}
+  .stage.done{border-color:var(--ok)}
+  .stage.done .num{color:var(--ok)}
+  .stage.done::after{content:"✓";position:absolute;bottom:8px;right:12px;color:var(--ok);font-weight:800}
+  @keyframes pulse{50%{box-shadow:0 0 0 7px rgba(179,38,30,.07)}}
+  #detail{margin-top:14px;display:none}
+  #detail.on{display:block}
+  #detail h3{margin-bottom:4px;font-size:16px}
+  #detail .tools{color:var(--blue);font-size:14px;margin-top:8px}
+  #log{background:var(--dark);color:#9fd4ae;border-radius:var(--r);padding:16px 18px;margin-top:16px;font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;min-height:120px;max-height:260px;overflow-y:auto;white-space:pre-wrap}
+  #log .t{color:#5d7a8f}
+  #log .h{color:#ffb3ad}
+  #banner{display:none;margin-top:14px;background:var(--ok-soft);border:1px solid #bfe3cd;color:#14532d;border-radius:var(--r);padding:14px 18px;font-size:15px}
+  #banner.on{display:block}
+  /* -------- чеклісти -------- */
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .check-group h3{font-size:16px;margin-bottom:4px}
+  .progress{height:7px;background:#edf0f4;border-radius:99px;margin:10px 0 12px;overflow:hidden}
+  .progress i{display:block;height:100%;background:var(--ok);width:0;border-radius:99px;transition:width .3s}
+  label.ck{display:flex;gap:9px;align-items:flex-start;font-size:14.5px;padding:6px 4px;border-radius:8px;cursor:pointer}
+  label.ck:hover{background:#f6f8fa}
+  label.ck input{margin-top:3px;accent-color:var(--ok);width:16px;height:16px;flex:none}
+  label.ck.donetext span{color:var(--muted);text-decoration:line-through}
+  .check-group .reset{margin-top:10px;font-size:13px;background:none;border:none;color:var(--muted);cursor:pointer;text-decoration:underline}
+  /* -------- промпти -------- */
+  .prompt{margin-bottom:14px}
+  .prompt summary{cursor:pointer;font-weight:700;font-size:15.5px;padding:4px 0}
+  .prompt pre{background:var(--dark);color:#dbe6ee;border-radius:12px;padding:16px;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto;white-space:pre-wrap;margin-top:10px}
+  .copy{margin-top:8px;font-size:13.5px;border:1px solid var(--border);background:var(--card);border-radius:8px;padding:7px 14px;cursor:pointer;font-weight:600}
+  .copy.ok{color:var(--ok);border-color:var(--ok)}
+  /* -------- техстек -------- */
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .tablewrap{overflow-x:auto}
+  .cost{color:var(--ok);font-weight:700;white-space:nowrap}
+  footer{margin-top:34px;color:var(--muted);font-size:14px;text-align:center}
+  footer a{color:var(--blue)}
+  .hint{background:var(--blue-soft);border:1px solid #cddcea;border-radius:12px;padding:12px 16px;font-size:14px;color:#173a56;margin-top:14px}
+  .hint a{color:var(--blue);font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>«Новини Донбасу» <span class="red">·</span> автоматизація редакції</h1>
+    <p class="sub">Єдиний конвеєр для трьох команд — сайт, соцмережі, відео. Рутину виконують автоматизації, рішення ухвалюють куратори.</p>
+    <div class="chips">
+      <span class="chip">Час на матеріал: 2–3 год → <b>15–30 хв</b></span>
+      <span class="chip">Дублювання зусиль: <b>−50%</b></span>
+      <span class="chip">Публікації у 3 каналах: <b>+30%</b></span>
+      <span class="chip">Кураторський контроль: <b>100%</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="tabs" role="tablist">
+    <button class="on" data-tab="sim">▶ Конвеєр (симулятор)</button>
+    <button data-tab="check">✅ Чеклісти кураторів</button>
+    <button data-tab="prompts">🧠 Промпти</button>
+    <button data-tab="stack">🧰 Техстек</button>
+  </nav>
+
+  <!-- ============ СИМУЛЯТОР ============ -->
+  <section class="tab on" id="tab-sim">
+    <div class="card">
+      <h2>Шлях однієї новини через систему</h2>
+      <p class="note">Натисніть «Запустити тестову новину» — і подивіться, як матеріал проходить модулі М1–М7 і де саме підключається людина. Клік по картці — деталі етапу.</p>
+      <div class="controls">
+        <button class="btn primary" id="run">▶ Запустити тестову новину</button>
+        <button class="btn ghost" id="reset">Скинути</button>
+        <div class="timers">
+          <span class="timer old">Старий процес: <b>~2 год 45 хв</b></span>
+          <span class="timer new">Новий процес: <b id="mins">0 хв</b></span>
+        </div>
+      </div>
+      <div class="pipeline" id="pipeline"></div>
+      <div class="card" id="detail"></div>
+      <div id="banner"></div>
+      <div id="log">— журнал системи порожній, запустіть тестову новину —</div>
+      <div class="hint">🧪 Це демонстрація логіки. <b>Реальне тестування</b> — імпортуйте готові воркфлоу з папки <a href="https://github.com/alexmazuka/nd-newsroom-automation/tree/main/workflows" target="_blank" rel="noopener">workflows/</a> у n8n (інструкція на 15 хвилин у репозиторії).</div>
+    </div>
+  </section>
+
+  <!-- ============ ЧЕКЛІСТИ ============ -->
+  <section class="tab" id="tab-check">
+    <div class="card">
+      <h2>Чеклісти кураторів</h2>
+      <p class="note">Робочий інструмент на щодень: позначки зберігаються у вашому браузері. Повні версії — у папці <a href="https://github.com/alexmazuka/nd-newsroom-automation/tree/main/checklists" target="_blank" rel="noopener">checklists/</a>.</p>
+      <div class="cols" id="checklists" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  <!-- ============ ПРОМПТИ ============ -->
+  <section class="tab" id="tab-prompts">
+    <div class="card">
+      <h2>Промпти редакції для Claude</h2>
+      <p class="note">Скопіюйте промпт, підставте факти реальної новини — це найшвидший спосіб протестувати якість AI-драфтів ще до розгортання інфраструктури.</p>
+      <div id="prompts" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <!-- ============ ТЕХСТЕК ============ -->
+  <section class="tab" id="tab-stack">
+    <div class="card">
+      <h2>Техстек системи</h2>
+      <p class="note">Принцип: безкоштовні/відкриті інструменти + те, що редакція вже використовує. Повна архітектура зі схемами — у <a href="https://github.com/alexmazuka/nd-newsroom-automation#readme" target="_blank" rel="noopener">README репозиторію</a>.</p>
+      <div class="tablewrap" style="margin-top:14px">
+      <table>
+        <tr><th>Шар</th><th>Інструмент</th><th>Роль</th><th>Вартість</th></tr>
+        <tr><td>CMS</td><td><b>WordPress + REST API</b></td><td>існуючий сайт; чернетки й публікації через API</td><td class="cost">0</td></tr>
+        <tr><td>Керування сайтом</td><td><b>WPVibe</b></td><td>AI-керування WordPress через Claude</td><td class="cost">0</td></tr>
+        <tr><td>SEO</td><td><b>Yoast SEO</b> (free)</td><td>мета-теги, sitemap, focus keyphrase з AI-драфта</td><td class="cost">0</td></tr>
+        <tr><td>Хаб автоматизації</td><td><b>n8n</b> (self-hosted)</td><td>уся логіка модулів М1–М7</td><td class="cost">VPS ~$5–6/міс</td></tr>
+        <tr><td>AI-ядро</td><td><b>Claude API</b></td><td>драфти, соцадаптація, заголовки, SEO, сценарії</td><td class="cost">від ~$27/міс</td></tr>
+        <tr><td>Інтерфейс кураторів</td><td><b>Telegram Bot</b></td><td>картки новин, затвердження ✅/❌, сповіщення</td><td class="cost">0</td></tr>
+        <tr><td>Дашборд</td><td><b>Google Sheets + Looker Studio</b></td><td>статуси, метрики, журнал антидубля</td><td class="cost">0</td></tr>
+        <tr><td>База знань</td><td><b>Notion</b></td><td>SOP, промпти, документація</td><td class="cost">0</td></tr>
+        <tr><td>Графіка</td><td><b>Canva</b> (Brand Kit)</td><td>шаблони обкладинок і карток</td><td class="cost">наявний план</td></tr>
+        <tr><td>Відео</td><td><b>Final Cut Pro</b> + <b>Whisper</b> (локально)</td><td>монтаж за шаблонами; субтитри без хмари</td><td class="cost">наявна ліцензія / 0</td></tr>
+      </table>
+      </div>
+      <h2 style="margin-top:26px">Моделі Claude і бюджет</h2>
+      <div class="tablewrap" style="margin-top:10px">
+      <table>
+        <tr><th>Модель</th><th>ID для API</th><th>Вхід / вихід, $ за 1M токенів</th><th>Оцінка на ~900 матеріалів/міс</th></tr>
+        <tr><td>Claude Opus 4.8 <i>(за замовчуванням)</i></td><td><code>claude-opus-4-8</code></td><td>$5 / $25</td><td>≈ $135/міс</td></tr>
+        <tr><td>Claude Sonnet 5</td><td><code>claude-sonnet-5</code></td><td>$3 / $15 (інтро $2 / $10 до 31.08.2026)</td><td>≈ $81 (інтро ≈ $54)</td></tr>
+        <tr><td>Claude Haiku 4.5</td><td><code>claude-haiku-4-5</code></td><td>$1 / $5</td><td>≈ $27/міс</td></tr>
+      </table>
+      </div>
+      <p class="note" style="margin-top:10px">Перемкнути модель = змінити одне поле <code>model</code> у воркфлоу. Повна вартість володіння системою — від ~$32/міс (VPS + Haiku).</p>
+    </div>
+  </section>
+
+  <footer>
+    Технічна документація проєкту цифрової трансформації редакції ·
+    <a href="https://github.com/alexmazuka/nd-newsroom-automation" target="_blank" rel="noopener">github.com/alexmazuka/nd-newsroom-automation</a>
+  </footer>
+</div>
+
+<script>
+/* ---------------- вкладки ---------------- */
+document.querySelectorAll('nav.tabs button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('nav.tabs button').forEach(x => x.classList.remove('on'));
+    document.querySelectorAll('section.tab').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    document.getElementById('tab-' + b.dataset.tab).classList.add('on');
+  });
+});
+
+/* ---------------- дані етапів ---------------- */
+const STAGES = [
+  {m:'М1', title:'Збір новин', actor:'auto', tools:'n8n · RSS, Telegram-моніторинг, повідомлення авдиторії',
+   desc:'Кожні 15 хвилин n8n перевіряє джерела і перетворює нові події на нормалізовані картки новин.',
+   min:0, logs:[['a','Подія з RSS Донецької ОВА: «Обстріл Костянтинівки» — картку створено']]},
+  {m:'М2', title:'Антидубль-фільтр', actor:'auto', tools:'n8n · журнал за 72 години у Google Sheets',
+   desc:'Система звіряє посилання й заголовки з усім, що вже було в роботі за останні 72 години. Дублі не потрапляють до кураторів — саме тут зникає подвійна робота команд.',
+   min:1, logs:[['a','Перевірено проти 47 матеріалів за 72 год — дублів немає']]},
+  {m:'М1', title:'Рішення куратора', actor:'human', tools:'Telegram-бот · кнопки ✅ беремо / ❌ пропускаємо',
+   desc:'Картка приходить у чат кураторів. Людина за секунди вирішує, чи це наша тема. Без ✅ система далі не йде.',
+   min:3, logs:[['h','Куратор Люба: ✅ Беремо в роботу']]},
+  {m:'М3', title:'AI-драфт', actor:'auto', tools:'Claude API · промпт редакції «Чернетка новини»',
+   desc:'За підтвердженими фактами Claude пише чернетку: лід, деталі, бекграунд + 3 заголовки, SEO-фраза і мета-опис. Чого бракує — позначає [ПЕРЕВІРИТИ], а не вигадує.',
+   min:2, logs:[['a','Чернетку створено: 3 заголовки, SEO-фраза, 1 позначка [ПЕРЕВІРИТИ: кількість постраждалих]']]},
+  {m:'М3', title:'Верифікація і публікація', actor:'human', tools:'WordPress + Yoast · чекліст куратора сайту',
+   desc:'Куратор сайту звіряє факти з джерелами (для ТОТ — два незалежні підтвердження), знімає позначки [ПЕРЕВІРИТИ], обирає заголовок і натискає «Опублікувати». Це головна точка контролю якості.',
+   min:12, logs:[['h','Куратор сайту: факти звірено, позначку знято, заголовок №2 обрано'],['h','Опубліковано на сайті ✅']]},
+  {m:'М4', title:'Соцадаптація', actor:'auto', tools:'Claude API · webhook «опубліковано» → версії FB/TG/X',
+   desc:'Щойно матеріал вийшов на сайті, система сама готує три версії поста у стилі кожної платформи.',
+   min:1, logs:[['a','Згенеровано пости: Facebook, Telegram, X — надіслано куратору SMM']]},
+  {m:'М4', title:'Затвердження SMM', actor:'human', tools:'Telegram-бот · чекліст SMM (безпека фото/гео!)',
+   desc:'Куратор SMM перевіряє тон, безпеку зображень і геолокацій — і затверджує. Далі автопостинг.',
+   min:4, logs:[['h','Куратор SMM: ✅ затверджено — опубліковано у 3 соцмережах']]},
+  {m:'М5', title:'Відео-таск', actor:'auto', tools:'Claude (сценарій, шотліст, титри) · Whisper · Final Cut',
+   desc:'Паралельно створюється таск для відділу відео з готовою заготовкою сценарію. Куратор відео вирішує, чи потрібен сюжет.',
+   min:2, logs:[['a','Таск на сюжет створено: сценарій 75 сек, шотліст, титри, текст обкладинки']]},
+  {m:'М6·М7', title:'Синхронізація і дашборд', actor:'auto', tools:'Google Sheets + Looker Studio · сповіщення командам',
+   desc:'Статус матеріалу оновлюється наскрізь: усі три команди бачать у реальному часі, що на якому етапі. Час кожного етапу фіксується автоматично — це і є дані для KPI.',
+   min:0, logs:[['a','Статус: САЙТ ✅ · СОЦМЕРЕЖІ ✅ · ВІДЕО 🔄 — дашборд оновлено']]}
+];
+
+const OLD_MIN = 165;
+const pipeline = document.getElementById('pipeline');
+const detail = document.getElementById('detail');
+const logEl = document.getElementById('log');
+const banner = document.getElementById('banner');
+const minsEl = document.getElementById('mins');
+const runBtn = document.getElementById('run');
+let running = false;
+
+function renderPipeline(){
+  pipeline.innerHTML = '';
+  STAGES.forEach((s,i)=>{
+    const el = document.createElement('div');
+    el.className = 'stage'; el.id = 'st'+i;
+    el.innerHTML =
+      '<div class="num">'+(i+1)+'/'+STAGES.length+'</div>'+
+      '<div class="top"><span class="tag mod">'+s.m+'</span>'+
+      (s.actor==='auto' ? '<span class="tag auto">⚙️ авто</span>' : '<span class="tag human">🧑 куратор</span>')+
+      '</div><h3>'+s.title+'</h3><div class="tools">'+s.tools+'</div>';
+    el.addEventListener('click',()=>showDetail(i));
+    pipeline.appendChild(el);
+  });
+}
+function showDetail(i){
+  const s = STAGES[i];
+  detail.className = 'card on';
+  detail.innerHTML = '<h3>'+(i+1)+'. '+s.title+' <span class="tag mod">'+s.m+'</span> '+
+    (s.actor==='auto'?'<span class="tag auto">⚙️ автоматично</span>':'<span class="tag human">🧑 рішення куратора</span>')+
+    '</h3><p style="margin-top:6px">'+s.desc+'</p><div class="tools">🔧 '+s.tools+'</div>';
+}
+function clockStr(min){
+  const h = 10 + Math.floor((0+min)/60), m = min%60;
+  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+}
+function addLog(simMin, kind, text){
+  if(logEl.dataset.empty !== '0'){ logEl.textContent=''; logEl.dataset.empty='0'; }
+  const line = document.createElement('div');
+  line.innerHTML = '<span class="t">['+clockStr(simMin)+']</span> ' + (kind==='h' ? '<span class="h">'+text+'</span>' : text);
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+async function run(){
+  if(running) return;
+  reset();
+  running = true; runBtn.disabled = true;
+  let total = 0;
+  addLog(0,'a','🟢 Тестова новина запущена в конвеєр');
+  for(let i=0;i<STAGES.length;i++){
+    const s = STAGES[i], el = document.getElementById('st'+i);
+    el.classList.add('active');
+    showDetail(i);
+    await sleep(s.actor==='human'?1600:1100);
+    total += s.min;
+    s.logs.forEach(l=>addLog(total, l[0], l[1]));
+    el.classList.remove('active'); el.classList.add('done');
+    minsEl.textContent = total + ' хв';
+  }
+  addLog(total,'a','🏁 Цикл завершено за ~'+total+' хв (було ~2 год 45 хв)');
+  banner.className='on';
+  banner.innerHTML = '<b>Готово за ~'+total+' хвилин замість ~'+Math.round(OLD_MIN/60*10)/10+' годин.</b> Економія ~'+Math.round((1-total/OLD_MIN)*100)+'% часу — і кожен крок, де це важливо, підтвердила людина (3 кураторські затвердження).';
+  running = false; runBtn.disabled = false;
+}
+function reset(){
+  STAGES.forEach((_,i)=>{ const el=document.getElementById('st'+i); el.classList.remove('active','done'); });
+  logEl.textContent='— журнал системи порожній, запустіть тестову новину —';
+  logEl.dataset.empty='1';
+  banner.className=''; banner.innerHTML='';
+  minsEl.textContent='0 хв';
+  detail.className='card'; detail.innerHTML='';
+}
+renderPipeline();
+runBtn.addEventListener('click',run);
+document.getElementById('reset').addEventListener('click',reset);
+
+/* ---------------- чеклісти ---------------- */
+const CHECKS = [
+  {id:'site', title:'🖥 Куратор сайту', items:[
+    'Першоджерело надійне; для ТОТ — два незалежні підтвердження',
+    'Усі позначки [ПЕРЕВІРИТИ] з драфта зняті',
+    'Цифри, дати, імена, топоніми звірені',
+    'Заголовок відповідає фактам, без перебільшення',
+    'Yoast: keyphrase, title ≤60, description ≤155 — не червоний',
+    'Фото: права, підпис, alt-текст',
+    'Рубрика, теги, слаг латиницею',
+    'Статус у дашборді → «На сайті»'
+  ]},
+  {id:'smm', title:'📱 Куратор SMM', items:[
+    'Факти в постах збігаються з новиною (AI нічого не додав)',
+    'Тон під платформу: FB розгорнуто · TG факт першим · X ≤270 знаків',
+    'Безпека: немає облич/локацій, що можуть зашкодити людям на ТОТ',
+    'Посилання веде на правильний матеріал',
+    'Обкладинка з Canva-шаблону за брендбуком',
+    'Час публікації: терміново — одразу, інакше — піковий слот',
+    'Статус у дашборді → «У соцмережах»'
+  ]},
+  {id:'video', title:'🎬 Куратор відео', items:[
+    'Сценарій звірено з опублікованим текстом',
+    'Позначки [ЗНАЙТИ ФУТАЖ] закриті, права з’ясовані',
+    'Шаблон Final Cut проєкту, хук у перші 3 сек',
+    'Субтитри Whisper вичитані (імена, топоніми, цифри)',
+    'Вертикальна версія 9:16',
+    'Обкладинка ≤6 слів, опис + посилання на сайт',
+    'Статус у дашборді → «Відео опубліковано»'
+  ]}
+];
+const store = JSON.parse(localStorage.getItem('nd-check-v1')||'{}');
+function saveStore(){ localStorage.setItem('nd-check-v1', JSON.stringify(store)); }
+function renderChecks(){
+  const root = document.getElementById('checklists');
+  root.innerHTML='';
+  CHECKS.forEach(g=>{
+    const div = document.createElement('div');
+    div.className='check-group';
+    div.innerHTML = '<h3>'+g.title+'</h3><div class="progress"><i id="pr-'+g.id+'"></i></div>';
+    g.items.forEach((txt,i)=>{
+      const key = g.id+'-'+i;
+      const lb = document.createElement('label');
+      lb.className = 'ck'+(store[key]?' donetext':'');
+      lb.innerHTML = '<input type="checkbox" '+(store[key]?'checked':'')+'><span>'+txt+'</span>';
+      lb.querySelector('input').addEventListener('change',e=>{
+        store[key]=e.target.checked; if(!e.target.checked) delete store[key];
+        lb.classList.toggle('donetext', e.target.checked);
+        saveStore(); updateProgress(g);
+      });
+      div.appendChild(lb);
+    });
+    const rs = document.createElement('button');
+    rs.className='reset'; rs.textContent='Скинути для нового матеріалу';
+    rs.addEventListener('click',()=>{
+      g.items.forEach((_,i)=>delete store[g.id+'-'+i]);
+      saveStore(); renderChecks();
+    });
+    div.appendChild(rs);
+    root.appendChild(div);
+    updateProgress(g);
+  });
+}
+function updateProgress(g){
+  const done = g.items.filter((_,i)=>store[g.id+'-'+i]).length;
+  document.getElementById('pr-'+g.id).style.width = (done/g.items.length*100)+'%';
+}
+renderChecks();
+
+/* ---------------- промпти ---------------- */
+const PROMPTS = [
+{title:'М3 · Чернетка новини (основний)', body:
+`Ти — випусковий редактор онлайн-видання «Новини Донбасу». Пиши українською.
+
+Завдання: за наведеними фактами підготуй чернетку новини.
+
+Правила:
+1. Використовуй ЛИШЕ надані факти. Нічого не вигадуй і не додумуй.
+2. Якщо для повноти бракує факту (дата, місце, джерело, цифра) — встав у текст
+   позначку [ПЕРЕВІРИТИ: чого саме бракує].
+3. Структура: лід з головним фактом (1–2 речення) → деталі (2–4 абзаци) →
+   бекграунд/контекст (1 абзац).
+4. Нейтральний інформаційний тон, без оцінок та емоційних епітетів.
+5. Термінологія редакційної політики: «тимчасово окупована територія»,
+   «російські війська», повні назви установ при першій згадці.
+
+Наприкінці відповіді окремими рядками:
+ЗАГОЛОВКИ: три варіанти, до 90 знаків, головний факт — на початку
+SEO-ФРАЗА: ключова фраза для Yoast (2–4 слова)
+МЕТА-ОПИС: до 155 знаків
+
+Вхідні дані:
+Робочий заголовок: {{заголовок}}
+Факти:
+{{факти — списком, кожен з джерелом}}
+Джерело: {{першоджерело}}`},
+{title:'М4 · Соцадаптація (FB / TG / X)', body:
+`Ти — SMM-редактор «Новини Донбасу». За опублікованою новиною створи три версії
+поста українською. Використовуй лише факти з наданого тексту — нічого не додавай.
+
+1) FACEBOOK
+   - 2–4 речення: головний факт + одна важлива деталь
+   - наприкінці — коротке запитання до читачів для залучення
+   - посилання на матеріал останнім рядком
+
+2) TELEGRAM
+   - стисло, факт першим рядком (жирним), 2–3 речення
+   - без хештегів; посилання останнім рядком
+
+3) X (TWITTER)
+   - до 270 знаків разом із посиланням
+   - найгостріший факт, без клікбейту
+
+Формат відповіді — рівно три блоки з заголовками FACEBOOK / TELEGRAM / X.
+
+Вхідні дані:
+Заголовок: {{заголовок}}
+Текст або лід новини: {{текст}}
+Посилання: {{URL}}`},
+{title:'М5 · Сценарій відео (60–90 сек)', body:
+`Ти — сценарист відеовідділу «Новини Донбасу». За текстом новини підготуй
+матеріали для короткого вертикального відео (60–90 секунд). Українською.
+Використовуй лише факти з тексту.
+
+Видай чотири блоки:
+1) СЦЕНАРІЙ — закадровий текст сценами по 2–3 речення; перші 3 секунди — хук
+2) ШОТЛІСТ — для кожної сцени: що в кадрі; чого бракує — познач [ЗНАЙТИ ФУТАЖ]
+3) ТИТРИ — 3–6 коротких плашок (до 8 слів)
+4) ОБКЛАДИНКА — текст прев'ю (до 6 слів) + підпис для YouTube/Reels + 5 тегів
+
+Вхідні дані:
+Заголовок: {{заголовок}}
+Текст новини: {{текст}}`},
+{title:'М3 · SEO-пакет для Yoast (окремо)', body:
+`Ти — SEO-редактор новинного сайту «Новини Донбасу» (WordPress + Yoast SEO).
+За текстом матеріалу підготуй SEO-пакет українською. Не вигадуй фактів.
+
+1) FOCUS KEYPHRASE — 2–4 слова, як шукають люди
+2) SEO TITLE — до 60 знаків, keyphrase ближче до початку
+3) META DESCRIPTION — до 155 знаків, з keyphrase, без клікбейту
+4) СЛАГ — латиницею, 3–5 слів через дефіс
+5) ТЕГИ — 3–5
+6) ПЕРЕЛІНКОВКА — 2–3 теми попередніх матеріалів для внутрішніх посилань
+
+Вхідні дані:
+Текст матеріалу: {{текст}}`}
+];
+const pr = document.getElementById('prompts');
+PROMPTS.forEach(p=>{
+  const d = document.createElement('details');
+  d.className='prompt';
+  const pre = document.createElement('pre'); pre.textContent = p.body;
+  const btn = document.createElement('button'); btn.className='copy'; btn.textContent='📋 Скопіювати промпт';
+  btn.addEventListener('click',async()=>{
+    try{ await navigator.clipboard.writeText(p.body); btn.textContent='✓ Скопійовано'; btn.classList.add('ok'); }
+    catch(e){ btn.textContent='Виділіть текст вручну'; }
+    setTimeout(()=>{btn.textContent='📋 Скопіювати промпт';btn.classList.remove('ok');},2500);
+  });
+  const sum = document.createElement('summary'); sum.textContent = p.title;
+  d.appendChild(sum); d.appendChild(pre); d.appendChild(btn);
+  pr.appendChild(d);
+});
+</script>
+</body>
+</html>
