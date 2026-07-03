@@ -56,7 +56,7 @@ curl -X POST "<Test URL вузла Webhook>" \
 
 ## Крок 4. Поля Yoast через REST (для повної автоматизації М3)
 
-Щоб воркфлоу 02 міг заповнювати SEO-поля Yoast, додайте у `functions.php` дочірньої теми (або через WPVibe):
+Щоб воркфлоу 02 міг заповнювати SEO-поля Yoast, додайте сніпет через плагін **Code Snippets** (спосіб перевірено на matsuka.online — тема лишається недоторканою) або у `functions.php` дочірньої теми:
 
 ```php
 add_action('init', function () {
